@@ -36,8 +36,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e
-            cd /opt/myapp
+            cd /opt/myapp/target
             JAR=$(ls *.jar | head -n 1)
-            mv "$JAR" app.jar
+
+            sudo mv "$JAR" /opt/myapp/app.jar
+            
             sudo systemctl restart myapp
             sudo systemctl --no-pager status myapp
