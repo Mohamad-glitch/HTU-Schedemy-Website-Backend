@@ -16,4 +16,4 @@ jobs:
           distribution: 'temurin'
           cache: maven
       - name: Verify Logic & Coverage
-        run: mvn test # Add JaCoCo check here later
+        run: mvn test
