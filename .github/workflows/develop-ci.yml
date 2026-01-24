@@ -1,0 +1,19 @@
+name: Develop Merge Gate
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Verify Logic & Coverage
+        run: mvn test # Add JaCoCo check here later
