@@ -1,4 +1,4 @@
-name: Develop Merge Gate
+name: Merge from Feature Branch Develope using Pull Request 
 
 on:
   pull_request:
