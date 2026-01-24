@@ -1,4 +1,4 @@
-name: Feature CI
+name: Merge from Feature Branch Develope using Pull Request 
 
 on:
   push:
