@@ -1,4 +1,4 @@
-name: Feature CI
+name: CI for Feature Branch Runs Test on Push
 
 on:
   push:
