@@ -1,5 +1,5 @@
 ---
-- name: Configure Spring Boot AMI
+- name: Configure Schedemy Spring Boot AMI
   hosts: all
   become: yes
   tasks:
@@ -9,39 +9,41 @@
         state: present
         update_cache: yes
 
-    - name: Create App Directory
+    - name: Ensure app directory exists
       file:
-        path: /opt/myapp
+        path: /home/ec2-user/HTU-Schedemy-Website-Backend
         state: directory
-        owner: ubuntu
+        owner: ec2-user
+        group: ec2-user
 
-    - name: Copy Spring Boot JAR
+    - name: Copy JAR file
       copy:
-        src: target/my-app-0.0.1-SNAPSHOT.jar # Ensure this matches your pom.xml name
-        dest: /opt/myapp/app.jar
+        # This assumes your GitHub Action just ran 'mvn package'
+        src: target/EduSched-0.0.1-SNAPSHOT.jar 
+        dest: /home/ec2-user/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
+        owner: ec2-user
         mode: '0755'
 
     - name: Create Systemd Service
       copy:
-        dest: /etc/systemd/system/myapp.service
+        dest: /etc/systemd/system/final.service
         content: |
           [Unit]
-          Description=Spring Boot Application
+          Description=Schedemy Spring Boot Application
           After=network.target
 
           [Service]
-          User=ubuntu
-          # Optimize JVM memory for t3.micro/small
-          ExecStart=/usr/bin/java -Xmx512m -Xms512m -jar /opt/myapp/app.jar
+          User=ec2-user
+          WorkingDirectory=/home/ec2-user/HTU-Schedemy-Website-Backend
+          ExecStart=/usr/bin/java -jar /home/ec2-user/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
           SuccessExitStatus=143
           Restart=always
-          RestartSec=10
+          RestartSec=5
 
           [Install]
           WantedBy=multi-user.target
 
-    - name: Enable and Start Service
+    - name: Enable the service
       systemd:
-        name: myapp
+        name: final
         enabled: yes
-        state: started
