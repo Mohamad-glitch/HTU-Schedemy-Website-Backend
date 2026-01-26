@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class BankApplication {
 
-  // this commit to test the CI pipeline 4
+  // this commit to test the deployment 1
   public static void main(String[] args) {
     SpringApplication.run(BankApplication.class, args);
   }
