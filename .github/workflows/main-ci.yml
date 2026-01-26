@@ -2,11 +2,9 @@ name: Runs All Tests then Deploy
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -35,7 +33,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1 # Updated to your Stockholm region
+          aws-region: eu-north-1 # Set to Stockholm
 
       - name: Setup Packer
         if: success()
@@ -47,20 +45,18 @@ jobs:
         run: |
           packer init build.pkr.hcl
           packer build -machine-readable build.pkr.hcl | tee build_output.txt
-          # Extracts the new AMI ID from Packer logs
           echo "AMI_ID=$(grep 'artifact,0,id' build_output.txt | cut -d, -f6 | cut -d: -f2)" >> $GITHUB_ENV
 
-      - name: Start Canary Deployment (25% -> 50% -> 75% -> 100%)
-        if: success()
+      - name: Start Canary Deployment (25% -> 100%)
+        if: success() && env.AMI_ID != ''
         run: |
-          # 1. Update your Launch Template 'setup-lunch-template'
+          # Update your Stockholm Launch Template
           aws ec2 create-launch-template-version \
             --launch-template-name "setup-lunch-template" \
             --source-version '$Latest' \
             --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
 
-          # 2. Start Canary Instance Refresh for ASG 'final'
-          # With 2 instances, this replaces 1 instance first (50%), then the next.
+          # Trigger Instance Refresh on Stockholm ASG
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "final" \
             --preferences '{
