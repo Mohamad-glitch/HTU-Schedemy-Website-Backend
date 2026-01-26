@@ -14,8 +14,9 @@ packer {
 source "amazon-ebs" "java_app" {
   ami_name      = "java-app-{{timestamp}}"
   instance_type = "t3.micro"
-  region        = "eu-north-1"
-  source_ami    = "ami-0c7217cdde317cfec" # Ubuntu 22.04 LTS in eu-north-1
+  region        = "eu-north-1" # Stockholm
+  # This is the verified Ubuntu 22.04 LTS ID for eu-north-1
+  source_ami    = "ami-09a9858973b28897a" 
   ssh_username  = "ubuntu"
 }
 
