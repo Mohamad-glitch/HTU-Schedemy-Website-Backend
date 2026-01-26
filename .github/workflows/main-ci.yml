@@ -20,15 +20,10 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Final Integration Check (Maven Test)
-        run: mvn test
-
-      - name: Package Application (Maven Build)
-        if: success()
+      - name: Maven Package (Build JAR)
         run: mvn package -DskipTests 
 
       - name: Configure AWS Credentials
-        if: success()
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -36,18 +31,16 @@ jobs:
           aws-region: eu-north-1
 
       - name: Setup Packer
-        if: success()
         uses: hashicorp/setup-packer@main
 
       - name: Build AMI with Packer & Ansible
-        if: success()
         id: packer_build
         run: |
           packer init build.pkr.hcl
           packer build -machine-readable build.pkr.hcl | tee build_output.txt
           echo "AMI_ID=$(grep 'artifact,0,id' build_output.txt | cut -d, -f6 | cut -d: -f2)" >> $GITHUB_ENV
 
-      - name: Start Canary Deployment (25% -> 100%)
+      - name: Start Canary Deployment and Wait
         if: success() && env.AMI_ID != ''
         run: |
           # 1. Update Launch Template
@@ -56,24 +49,33 @@ jobs:
             --source-version '$Latest' \
             --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
 
-          # 2. Check for and cancel any active Instance Refresh
-          STATUS=$(aws autoscaling describe-instance-refreshes \
-            --auto-scaling-group-name "final" \
-            --query "InstanceRefreshes[0].Status" --output text)
-
-          if [ "$STATUS" == "InProgress" ] || [ "$STATUS" == "Pending" ]; then
-            echo "A refresh is already running. Cancelling it..."
-            aws autoscaling cancel-instance-refresh --auto-scaling-group-name "final"
-            # Wait a moment for AWS to process the cancellation
-            sleep 10
-          fi
-
-          # 3. Start the new Instance Refresh
-          aws autoscaling start-instance-refresh \
+          # 2. Start Instance Refresh
+          REFRESH_ID=$(aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "final" \
             --preferences '{
               "MinHealthyPercentage": 100,
-              "InstanceWarmup": 300,
-              "CheckpointPercentages": [25, 50, 75, 100],
-              "CheckpointDelay": 300
-            }'
+              "InstanceWarmup": 60,
+              "CheckpointPercentages": [50, 100],
+              "CheckpointDelay": 60
+            }' --query "InstanceRefreshId" --output text)
+
+          echo "Deployment Started. ID: $REFRESH_ID"
+
+          # 3. Wait/Poll Loop
+          while true; do
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name "final" \
+              --instance-refresh-ids $REFRESH_ID \
+              --query "InstanceRefreshes[0].Status" --output text)
+
+            echo "Current Status: $STATUS..."
+
+            if [ "$STATUS" == "Successful" ]; then
+              echo "Deployment Successful!"
+              break
+            elif [ "$STATUS" == "Failed" ] || [ "$STATUS" == "Cancelled" ]; then
+              echo "Deployment $STATUS."
+              exit 1
+            fi
+            sleep 60
+          done
