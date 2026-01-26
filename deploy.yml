@@ -3,28 +3,44 @@
   hosts: all
   become: yes
   tasks:
+    - name: Wait for automatic updates to release apt lock
+      shell: "while fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 5; done"
+      changed_when: false
+
+    - name: Clean and Fix Broken Packages
+      shell: |
+        apt-get clean
+        apt-get update --fix-missing
+        apt-get install -f -y
+      changed_when: false
+
     - name: Install Java 17
       apt:
         name: openjdk-17-jre-headless
         state: present
         update_cache: yes
+      register: java_install
+      until: java_install is success
+      retries: 5
+      delay: 10
 
     - name: Ensure app directory exists
       file:
-        path: /home/ec2-user/HTU-Schedemy-Website-Backend
+        path: /home/ec2-user/HTU-Schedemy-Website-Backend/target
         state: directory
         owner: ec2-user
         group: ec2-user
+        recurse: yes
 
-    - name: Copy JAR file
+    - name: Copy Spring Boot JAR
       copy:
-        # This assumes your GitHub Action just ran 'mvn package'
+        # Assumes GitHub Action ran 'mvn package' and deploy.yml is in root
         src: target/EduSched-0.0.1-SNAPSHOT.jar 
         dest: /home/ec2-user/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
         owner: ec2-user
         mode: '0755'
 
-    - name: Create Systemd Service
+    - name: Create Systemd Service File
       copy:
         dest: /etc/systemd/system/final.service
         content: |
