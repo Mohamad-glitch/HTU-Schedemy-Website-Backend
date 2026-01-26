@@ -50,11 +50,25 @@ jobs:
       - name: Start Canary Deployment (25% -> 100%)
         if: success() && env.AMI_ID != ''
         run: |
+          # 1. Update Launch Template
           aws ec2 create-launch-template-version \
             --launch-template-name "setup-lunch-template" \
             --source-version '$Latest' \
             --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
 
+          # 2. Check for and cancel any active Instance Refresh
+          STATUS=$(aws autoscaling describe-instance-refreshes \
+            --auto-scaling-group-name "final" \
+            --query "InstanceRefreshes[0].Status" --output text)
+
+          if [ "$STATUS" == "InProgress" ] || [ "$STATUS" == "Pending" ]; then
+            echo "A refresh is already running. Cancelling it..."
+            aws autoscaling cancel-instance-refresh --auto-scaling-group-name "final"
+            # Wait a moment for AWS to process the cancellation
+            sleep 10
+          fi
+
+          # 3. Start the new Instance Refresh
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "final" \
             --preferences '{
