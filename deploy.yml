@@ -1,0 +1,38 @@
+---
+- name: Configure Java Application Image
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install OpenJDK 17
+      apt:
+        name: openjdk-17-jre-headless
+        state: present
+        update_cache: yes
+
+    - name: Copy JAR file to Server
+      copy:
+        src: target/my-app-1.0.jar  # Match your Maven output name
+        dest: /opt/app.jar
+        mode: '0755'
+
+    - name: Set up systemd service
+      copy:
+        dest: /etc/systemd/system/myapp.service
+        content: |
+          [Unit]
+          Description=Java Application
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/bin/java -jar /opt/app.jar
+          SuccessExitStatus=143
+          Restart=always
+          User=ubuntu
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable the service
+      systemd:
+        name: myapp
+        enabled: yes
