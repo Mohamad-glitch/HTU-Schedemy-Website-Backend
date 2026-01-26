@@ -11,19 +11,20 @@ packer {
   }
 }
 
-@@ -17,28 +11,22 @@ source "amazon-ebs" "java_app" {
+source "amazon-ebs" "java_app" {
+  ami_name      = "java-app-{{timestamp}}"
+  instance_type = "t3.micro"
   region        = "eu-north-1"
-  ssh_username  = "ubuntu"
+  ssh_username  = "ec2-user" # Using your preferred user
 
-  # Dynamic lookup for the latest Ubuntu 22.04 AMI
   source_ami_filter {
     filters = {
-      name                = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+      name                = "al2023-ami-2023.*-x86_64"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
     }
     most_recent = true
-    owners      = ["099720109477"] # Official Canonical ID
+    owners      = ["137112412989"] # Amazon
   }
 }
 
@@ -32,10 +33,8 @@ build {
 
   provisioner "ansible" {
     playbook_file = "./deploy.yml"
-    user          = "ubuntu"
-    use_proxy     = false
+    user          = "ec2-user"
     ansible_env_vars = [
-      "ANSIBLE_HOST_KEY_CHECKING=False",
       "ANSIBLE_PYTHON_INTERPRETER=/usr/bin/python3"
     ]
   }
