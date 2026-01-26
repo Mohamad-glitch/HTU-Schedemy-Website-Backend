@@ -1,6 +1,5 @@
 name: Runs All Tests then Deploy
 
-# this action will run on pull request and push to repo
 on:
   pull_request:
     branches:
@@ -36,7 +35,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: eu-north-1 # Updated to your Stockholm region
 
       - name: Setup Packer
         if: success()
@@ -48,21 +47,22 @@ jobs:
         run: |
           packer init build.pkr.hcl
           packer build -machine-readable build.pkr.hcl | tee build_output.txt
+          # Extracts the new AMI ID from Packer logs
           echo "AMI_ID=$(grep 'artifact,0,id' build_output.txt | cut -d, -f6 | cut -d: -f2)" >> $GITHUB_ENV
 
       - name: Start Canary Deployment (25% -> 50% -> 75% -> 100%)
         if: success()
         run: |
-          # 1. Update Launch Template
+          # 1. Update your Launch Template 'setup-lunch-template'
           aws ec2 create-launch-template-version \
-            --launch-template-name "my-app-launch-template" \
+            --launch-template-name "setup-lunch-template" \
             --source-version '$Latest' \
             --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
 
-          # 2. Start Canary Instance Refresh
-          # Replaces instances in stages. 25% of 2 instances = 1 instance at a time.
+          # 2. Start Canary Instance Refresh for ASG 'final'
+          # With 2 instances, this replaces 1 instance first (50%), then the next.
           aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name "my-asg-name" \
+            --auto-scaling-group-name "final" \
             --preferences '{
               "MinHealthyPercentage": 100,
               "InstanceWarmup": 300,
