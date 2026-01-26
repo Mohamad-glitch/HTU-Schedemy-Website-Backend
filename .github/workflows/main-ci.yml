@@ -33,7 +33,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1 # Set to Stockholm
+          aws-region: eu-north-1
 
       - name: Setup Packer
         if: success()
@@ -50,13 +50,11 @@ jobs:
       - name: Start Canary Deployment (25% -> 100%)
         if: success() && env.AMI_ID != ''
         run: |
-          # Update your Stockholm Launch Template
           aws ec2 create-launch-template-version \
             --launch-template-name "setup-lunch-template" \
             --source-version '$Latest' \
             --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
 
-          # Trigger Instance Refresh on Stockholm ASG
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "final" \
             --preferences '{
