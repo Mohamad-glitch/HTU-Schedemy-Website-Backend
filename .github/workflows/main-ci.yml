@@ -1,7 +1,11 @@
 name: Runs All Tests then Deploy
 
+# this action will run on pull request and push to repo
 on:
   pull_request:
+    branches:
+      - main
+  push:
     branches:
       - main
 
@@ -9,14 +13,59 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: maven
-      - name: Final Integration Check
+
+      - name: Final Integration Check (Maven Test)
         run: mvn test
-      - name: Package & Deploy
+
+      - name: Package Application (Maven Build)
         if: success()
-        run: echo "Packaging JAR and deploying to AWS EC2..."
+        run: mvn package -DskipTests 
+
+      - name: Configure AWS Credentials
+        if: success()
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Packer
+        if: success()
+        uses: hashicorp/setup-packer@main
+
+      - name: Build AMI with Packer & Ansible
+        if: success()
+        id: packer_build
+        run: |
+          packer init build.pkr.hcl
+          packer build -machine-readable build.pkr.hcl | tee build_output.txt
+          echo "AMI_ID=$(grep 'artifact,0,id' build_output.txt | cut -d, -f6 | cut -d: -f2)" >> $GITHUB_ENV
+
+      - name: Start Canary Deployment (25% -> 50% -> 75% -> 100%)
+        if: success()
+        run: |
+          # 1. Update Launch Template
+          aws ec2 create-launch-template-version \
+            --launch-template-name "my-app-launch-template" \
+            --source-version '$Latest' \
+            --launch-template-data "{\"ImageId\":\"${{ env.AMI_ID }}\"}"
+
+          # 2. Start Canary Instance Refresh
+          # Replaces instances in stages. 25% of 2 instances = 1 instance at a time.
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name "my-asg-name" \
+            --preferences '{
+              "MinHealthyPercentage": 100,
+              "InstanceWarmup": 300,
+              "CheckpointPercentages": [25, 50, 75, 100],
+              "CheckpointDelay": 300
+            }'
