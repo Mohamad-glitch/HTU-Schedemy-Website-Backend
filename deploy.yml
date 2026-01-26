@@ -26,18 +26,17 @@
 
     - name: Ensure app directory exists
       file:
-        path: /home/ec2-user/HTU-Schedemy-Website-Backend/target
+        path: /home/ubuntu/HTU-Schedemy-Website-Backend/target
         state: directory
-        owner: ec2-user
-        group: ec2-user
+        owner: ubuntu
+        group: ubuntu
         recurse: yes
 
     - name: Copy Spring Boot JAR
       copy:
-        # Assumes GitHub Action ran 'mvn package' and deploy.yml is in root
         src: target/EduSched-0.0.1-SNAPSHOT.jar 
-        dest: /home/ec2-user/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
-        owner: ec2-user
+        dest: /home/ubuntu/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
+        owner: ubuntu
         mode: '0755'
 
     - name: Create Systemd Service File
@@ -49,9 +48,9 @@
           After=network.target
 
           [Service]
-          User=ec2-user
-          WorkingDirectory=/home/ec2-user/HTU-Schedemy-Website-Backend
-          ExecStart=/usr/bin/java -jar /home/ec2-user/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
+          User=ubuntu
+          WorkingDirectory=/home/ubuntu/HTU-Schedemy-Website-Backend
+          ExecStart=/usr/bin/java -jar /home/ubuntu/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
           SuccessExitStatus=143
           Restart=always
           RestartSec=5
