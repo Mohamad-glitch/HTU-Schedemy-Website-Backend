@@ -15,7 +15,7 @@ source "amazon-ebs" "java_app" {
   ami_name      = "java-app-{{timestamp}}"
   instance_type = "t3.micro"
   region        = "eu-north-1"
-  ssh_username  = "ec2-user" # Amazon Linux uses ec2-user
+  ssh_username  = "ubuntu" # Amazon Linux uses ec2-user
 
   source_ami_filter {
     filters = {
@@ -25,7 +25,7 @@ source "amazon-ebs" "java_app" {
       virtualization-type = "hvm"
     }
     most_recent = true
-    owners      = ["137112412989"] # Official Amazon Owner ID
+    owners      = ["099720109477"] # Official Amazon Owner ID
   }
 }
 
@@ -34,7 +34,7 @@ build {
 
   provisioner "ansible" {
     playbook_file = "./deploy.yml"
-    user          = "ec2-user" # Must match ssh_username
+    user          = "ubuntu" # Must match ssh_username
     use_proxy     = false
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
