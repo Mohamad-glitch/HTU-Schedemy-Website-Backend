@@ -14,10 +14,19 @@ packer {
 source "amazon-ebs" "java_app" {
   ami_name      = "java-app-{{timestamp}}"
   instance_type = "t3.micro"
-  region        = "eu-north-1" # Stockholm
-  # This is the verified Ubuntu 22.04 LTS ID for eu-north-1
-  source_ami    = "ami-09a9858973b28897a" 
+  region        = "eu-north-1"
   ssh_username  = "ubuntu"
+
+  # Dynamic lookup for the latest Ubuntu 22.04 AMI
+  source_ami_filter {
+    filters = {
+      name                = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+      root-device-type    = "ebs"
+      virtualization-type = "hvm"
+    }
+    most_recent = true
+    owners      = ["099720109477"] # Official Canonical ID
+  }
 }
 
 build {
