@@ -1,38 +1,47 @@
 ---
-- name: Configure Java Application Image
+- name: Configure Spring Boot AMI
   hosts: all
   become: yes
   tasks:
-    - name: Install OpenJDK 17
+    - name: Install Java 17
       apt:
         name: openjdk-17-jre-headless
         state: present
         update_cache: yes
 
-    - name: Copy JAR file to Server
+    - name: Create App Directory
+      file:
+        path: /opt/myapp
+        state: directory
+        owner: ubuntu
+
+    - name: Copy Spring Boot JAR
       copy:
-        src: target/my-app-1.0.jar  # Match your Maven output name
-        dest: /opt/app.jar
+        src: target/my-app-0.0.1-SNAPSHOT.jar # Ensure this matches your pom.xml name
+        dest: /opt/myapp/app.jar
         mode: '0755'
 
-    - name: Set up systemd service
+    - name: Create Systemd Service
       copy:
         dest: /etc/systemd/system/myapp.service
         content: |
           [Unit]
-          Description=Java Application
+          Description=Spring Boot Application
           After=network.target
 
           [Service]
-          ExecStart=/usr/bin/java -jar /opt/app.jar
+          User=ubuntu
+          # Optimize JVM memory for t3.micro/small
+          ExecStart=/usr/bin/java -Xmx512m -Xms512m -jar /opt/myapp/app.jar
           SuccessExitStatus=143
           Restart=always
-          User=ubuntu
+          RestartSec=10
 
           [Install]
           WantedBy=multi-user.target
 
-    - name: Enable the service
+    - name: Enable and Start Service
       systemd:
         name: myapp
         enabled: yes
+        state: started
