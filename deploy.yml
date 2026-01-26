@@ -3,40 +3,24 @@
   hosts: all
   become: yes
   tasks:
-    - name: Wait for automatic updates to release apt lock
-      shell: "while fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 5; done"
-      changed_when: false
-
-    - name: Clean and Fix Broken Packages
-      shell: |
-        apt-get clean
-        apt-get update --fix-missing
-        apt-get install -f -y
-      changed_when: false
-
     - name: Install Java 17
-      apt:
-        name: openjdk-17-jre-headless
+      dnf: # Amazon Linux uses dnf
+        name: java-17-amazon-corretto-devel
         state: present
-        update_cache: yes
-      register: java_install
-      until: java_install is success
-      retries: 5
-      delay: 10
 
     - name: Ensure app directory exists
       file:
-        path: /home/ubuntu/HTU-Schedemy-Website-Backend/target
+        path: /home/ec2-user/HTU-Schedemy-Website-Backend/target
         state: directory
-        owner: ubuntu
-        group: ubuntu
+        owner: ec2-user
+        group: ec2-user
         recurse: yes
 
     - name: Copy Spring Boot JAR
       copy:
-        src: target/EduSched-0.0.1-SNAPSHOT.jar
-        dest: /home/ubuntu/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
-        owner: ubuntu
+        src: target/EduSched-0.0.1-SNAPSHOT.jar 
+        dest: /home/ec2-user/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
+        owner: ec2-user
         mode: '0755'
 
     - name: Create Systemd Service File
@@ -48,9 +32,9 @@
           After=network.target
 
           [Service]
-          User=ubuntu
-          WorkingDirectory=/home/ubuntu/HTU-Schedemy-Website-Backend
-          ExecStart=/usr/bin/java -jar /home/ubuntu/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
+          User=ec2-user
+          WorkingDirectory=/home/ec2-user/HTU-Schedemy-Website-Backend
+          ExecStart=/usr/bin/java -jar /home/ec2-user/HTU-Schedemy-Website-Backend/target/EduSched-0.0.1-SNAPSHOT.jar
           SuccessExitStatus=143
           Restart=always
           RestartSec=5
