@@ -27,4 +27,9 @@ public class Test {
     public int g(){
         return 1;
     }
+
+    @GetMapping("/test")
+    public String testDeployment(){
+        return "new update";
+    }
 }
