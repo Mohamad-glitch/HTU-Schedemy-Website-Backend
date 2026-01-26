@@ -15,17 +15,17 @@ source "amazon-ebs" "java_app" {
   ami_name      = "java-app-{{timestamp}}"
   instance_type = "t3.micro"
   region        = "eu-north-1"
-  ssh_username  = "ubuntu" # Amazon Linux uses ec2-user
+  ssh_username  = "ubuntu"
 
+  # Dynamic lookup for the latest Ubuntu 22.04 AMI
   source_ami_filter {
     filters = {
-      # This pattern finds the latest Amazon Linux 2023
-      name                = "al2023-ami-2023.*-x86_64"
+      name                = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
       root-device-type    = "ebs"
       virtualization-type = "hvm"
     }
     most_recent = true
-    owners      = ["099720109477"] # Official Amazon Owner ID
+    owners      = ["099720109477"] # Official Canonical ID
   }
 }
 
@@ -34,7 +34,7 @@ build {
 
   provisioner "ansible" {
     playbook_file = "./deploy.yml"
-    user          = "ubuntu" # Must match ssh_username
+    user          = "ubuntu"
     use_proxy     = false
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
