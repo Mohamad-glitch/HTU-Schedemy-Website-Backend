@@ -28,8 +28,8 @@ public class Test {
         return 1;
     }
 
-    @GetMapping("/test")
+    @GetMapping("/test1")
     public String testDeployment(){
-        return "new update";
+        return "test the CI/CD pipeline";
     }
 }
