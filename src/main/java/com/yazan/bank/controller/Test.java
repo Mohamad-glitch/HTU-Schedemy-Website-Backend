@@ -28,7 +28,7 @@ public class Test {
         return 1;
     }
 
-    @GetMapping("/test1")
+    @GetMapping("/test")
     public String testDeployment(){
         return "test the CI/CD pipeline";
     }
